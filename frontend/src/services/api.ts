@@ -24,6 +24,7 @@ export const getFileUrl = (filePath?: string): string => {
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 6000,
   headers: {
     'Content-Type': 'application/json'
   }
