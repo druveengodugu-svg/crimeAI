@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   FolderSearch, 
   Search, 
@@ -17,12 +17,20 @@ import { Badge } from '../components/common/Badge';
 
 export const CaseHistory: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [cases, setCases] = useState<InvestigationCase[]>([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [crimeType, setCrimeType] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState(searchParams.get('status') || '');
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const qStatus = searchParams.get('status') || '';
+    const qSearch = searchParams.get('search') || '';
+    setStatus(qStatus);
+    setSearch(qSearch);
+  }, [searchParams]);
 
   const fetchCases = async () => {
     setLoading(true);

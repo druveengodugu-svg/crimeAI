@@ -118,63 +118,93 @@ export const Dashboard: React.FC = () => {
       {/* Primary KPI Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Total Cases */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+        <div
+          onClick={() => navigate('/cases')}
+          className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-cyan-500/50 hover:bg-slate-900 cursor-pointer transition-all duration-200 space-y-2 group shadow-md"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono text-slate-400 uppercase">Total Cases</span>
-            <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+            <span className="text-xs font-mono text-slate-400 group-hover:text-cyan-400 uppercase transition-colors">Total Cases</span>
+            <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 group-hover:scale-110 transition-transform">
               <FolderSearch className="h-4 w-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-white font-mono">{cases.length}</div>
-          <p className="text-[10px] text-slate-400">All registered case files</p>
+          <div className="text-2xl font-black text-white font-mono group-hover:text-cyan-400 transition-colors">{cases.length}</div>
+          <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span>All registered case files</span>
+            <span className="text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity">View All →</span>
+          </div>
         </div>
 
         {/* Active Cases */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+        <div
+          onClick={() => navigate('/cases?status=Active')}
+          className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 cursor-pointer transition-all duration-200 space-y-2 group shadow-md"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono text-amber-400 uppercase">Active Cases</span>
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <span className="text-xs font-mono text-amber-400 uppercase">Active / Pending</span>
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 group-hover:scale-110 transition-transform">
               <Activity className="h-4 w-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-amber-400 font-mono">{activeCasesCount}</div>
-          <p className="text-[10px] text-slate-400">Ongoing active inquiries</p>
+          <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span>Ongoing inquiries</span>
+            <span className="text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">Open Active →</span>
+          </div>
         </div>
 
         {/* Closed Cases */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+        <div
+          onClick={() => navigate('/cases?status=Solved')}
+          className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900 cursor-pointer transition-all duration-200 space-y-2 group shadow-md"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-mono text-emerald-400 uppercase">Closed / Solved</span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
               <CheckSquare className="h-4 w-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-emerald-400 font-mono">{closedCasesCount}</div>
-          <p className="text-[10px] text-slate-400">Completed & archived</p>
+          <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span>Completed & solved</span>
+            <span className="text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity">Open Solved →</span>
+          </div>
         </div>
 
         {/* Evidence Files */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+        <div
+          onClick={() => navigate('/cases')}
+          className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-blue-500/50 hover:bg-slate-900 cursor-pointer transition-all duration-200 space-y-2 group shadow-md"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-mono text-blue-400 uppercase">Evidence Files</span>
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 group-hover:scale-110 transition-transform">
               <FileCheck className="h-4 w-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-white font-mono">{totalEvidenceCount}</div>
-          <p className="text-[10px] text-slate-400">Images, CCTV, Audio, PDFs</p>
+          <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span>Images, CCTV, Audio, PDFs</span>
+            <span className="text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">Inspect →</span>
+          </div>
         </div>
 
         {/* AI Analyses Completed */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+        <div
+          onClick={() => navigate('/cases')}
+          className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/50 hover:bg-slate-900 cursor-pointer transition-all duration-200 space-y-2 group shadow-md"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-mono text-purple-400 uppercase">AI Analyses</span>
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 group-hover:scale-110 transition-transform">
               <Sparkles className="h-4 w-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-purple-400 font-mono">{aiCompletedCount}</div>
-          <p className="text-[10px] text-slate-400">Gemini agent outputs</p>
+          <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span>Gemini agent outputs</span>
+            <span className="text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
+          </div>
         </div>
       </div>
 
