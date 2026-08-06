@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
+import { getFileUrl } from '../services/api';
 
 const PRESET_AVATARS = [
   { id: '1', name: 'Agent Vance', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80' },
@@ -214,7 +215,7 @@ export const Profile: React.FC = () => {
             <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
               {profile?.avatar_url ? (
                 <img
-                  src={profile.avatar_url}
+                  src={getFileUrl(profile.avatar_url)}
                   alt={profile.full_name}
                   className="h-20 w-20 rounded-2xl object-cover border-2 border-cyan-400 shadow-xl shadow-cyan-500/20 transition-all group-hover:opacity-80"
                 />

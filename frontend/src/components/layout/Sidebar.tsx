@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
+import { getFileUrl } from '../../services/api';
+
 interface SidebarProps {
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
@@ -109,7 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
             <div className="flex items-center space-x-3 min-w-0">
               {user?.avatar_url ? (
                 <img
-                  src={user.avatar_url}
+                  src={getFileUrl(user.avatar_url)}
                   alt={user.full_name}
                   className="h-9 w-9 rounded-full object-cover border border-cyan-500/40 shadow-sm flex-shrink-0"
                 />

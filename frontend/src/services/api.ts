@@ -1,6 +1,26 @@
 import axios from 'axios';
 
-export const API_BASE_URL = 'http://localhost:5000/api';
+const getBaseUrl = (): string => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  if (import.meta.env.PROD) {
+    return 'https://crimeai-backend.onrender.com/api';
+  }
+  return 'http://localhost:5000/api';
+};
+
+export const API_BASE_URL = getBaseUrl();
+
+export const getFileUrl = (filePath?: string): string => {
+  if (!filePath) return '';
+  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+    return filePath;
+  }
+  const backendOrigin = API_BASE_URL.replace(/\/api\/?$/, '');
+  const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
+  return `${backendOrigin}${cleanPath}`;
+};
 
 const api = axios.create({
   baseURL: API_BASE_URL,

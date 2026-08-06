@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { EvidenceFile, EvidenceAnalysis } from '../../types';
 import { aiService } from '../../services/aiService';
+import { getFileUrl } from '../../services/api';
 
 interface EvidenceViewerModalProps {
   evidence: EvidenceFile | null;
@@ -278,7 +279,7 @@ EVIDENCE TAGS: ${evidence.tags.join(', ')}`
 
             {/* Direct Download */}
             <a
-              href={evidence.file_path}
+              href={getFileUrl(evidence.file_path)}
               download={evidence.file_name}
               target="_blank"
               rel="noreferrer"
@@ -351,7 +352,7 @@ EVIDENCE TAGS: ${evidence.tags.join(', ')}`
 
                 <div className="max-w-full max-h-full flex items-center justify-center transition-transform duration-100 ease-out">
                   <img
-                    src={evidence.file_path}
+                    src={getFileUrl(evidence.file_path)}
                     alt={evidence.file_name}
                     style={{
                       transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom}) rotate(${rotation}deg)`
@@ -373,7 +374,7 @@ EVIDENCE TAGS: ${evidence.tags.join(', ')}`
                 <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl flex items-center justify-center">
                   <video
                     ref={videoRef}
-                    src={evidence.file_path}
+                    src={getFileUrl(evidence.file_path)}
                     onTimeUpdate={() => {
                       if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
                     }}
@@ -451,7 +452,7 @@ EVIDENCE TAGS: ${evidence.tags.join(', ')}`
               <div className="w-full max-w-2xl bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-2xl text-center">
                 <audio
                   ref={audioRef}
-                  src={evidence.file_path}
+                  src={getFileUrl(evidence.file_path)}
                   onTimeUpdate={() => {
                     if (audioRef.current) setAudioTime(audioRef.current.currentTime);
                   }}
@@ -523,7 +524,7 @@ EVIDENCE TAGS: ${evidence.tags.join(', ')}`
 
                 <div className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
                   <iframe
-                    src={evidence.file_path}
+                    src={getFileUrl(evidence.file_path)}
                     title={evidence.file_name}
                     className="w-full h-full"
                   />

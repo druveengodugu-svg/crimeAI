@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, Plus, Shield, Search, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { getFileUrl } from '../../services/api';
 
 interface NavbarProps {
   setMobileOpen: (open: boolean) => void;
@@ -69,7 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({ setMobileOpen }) => {
         <div className="flex items-center space-x-2">
           {user?.avatar_url ? (
             <img
-              src={user.avatar_url}
+              src={getFileUrl(user.avatar_url)}
               alt={user.full_name}
               className="h-8 w-8 rounded-full object-cover border border-cyan-500/40 shadow-sm"
             />
