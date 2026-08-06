@@ -17,10 +17,10 @@ const POLICE_ROLES = [
 ];
 
 export const Register: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [badgeNumber, setBadgeNumber] = useState('');
+  const [email, setEmail] = useState('investigator@crimelens.ai');
+  const [password, setPassword] = useState('password123');
+  const [fullName, setFullName] = useState('Chief Insp. Marcus Vance');
+  const [badgeNumber, setBadgeNumber] = useState('INV-9042');
   const [department, setDepartment] = useState('Cyber & Forensics Unit');
   const [role, setRole] = useState('Lead Investigator');
   const [error, setError] = useState<string | null>(null);

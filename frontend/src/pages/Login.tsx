@@ -8,8 +8,8 @@ export const Login: React.FC = () => {
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState('investigator@crimelens.ai');
   const [password, setPassword] = useState('password123');
-  const [fullName, setFullName] = useState('');
-  const [badgeNumber, setBadgeNumber] = useState('');
+  const [fullName, setFullName] = useState('Chief Insp. Marcus Vance');
+  const [badgeNumber, setBadgeNumber] = useState('INV-9042');
   const [department, setDepartment] = useState('Cyber & Forensics Unit');
   
   const [error, setError] = useState<string | null>(null);

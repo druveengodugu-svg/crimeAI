@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 export const SignupSchema = z.object({
   email: z.string().email('Invalid email address format'),
-  password: z.string().min(6, 'Password must be at least 6 characters long'),
-  full_name: z.string().min(2, 'Full name must be at least 2 characters long'),
+  password: z.string().min(1, 'Password is required'),
+  full_name: z.string().optional(),
   badge_number: z.string().optional(),
   department: z.string().optional(),
   role: z.string().optional()
