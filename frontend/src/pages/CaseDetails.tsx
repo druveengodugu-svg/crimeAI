@@ -58,6 +58,25 @@ export const CaseDetails: React.FC = () => {
   const [analyzingFileId, setAnalyzingFileId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusSuccessMessage, setStatusSuccessMessage] = useState<string | null>(null);
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!caseObj || !id) return;
+    setUpdatingStatus(true);
+    try {
+      const res = await caseService.updateCaseStatus(id, newStatus);
+      if (res.success) {
+        setCaseObj((prev) => (prev ? { ...prev, status: newStatus } : null));
+        setStatusSuccessMessage(`Case status updated to "${newStatus}"!`);
+        setTimeout(() => setStatusSuccessMessage(null), 5000);
+      }
+    } catch (err) {
+      console.error('Failed to update case status:', err);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   const fetchDetails = async () => {
     if (!id) return;
@@ -219,6 +238,18 @@ export const CaseDetails: React.FC = () => {
         </button>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* Quick Mark Solved Button */}
+          {caseObj.status !== 'Solved' && caseObj.status !== 'Closed' && (
+            <button
+              onClick={() => handleStatusChange('Solved')}
+              disabled={updatingStatus}
+              className="flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs px-4 py-2 rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-105"
+            >
+              <CheckCircle2 className="h-4 w-4 stroke-[2.5]" />
+              <span>Mark Case Solved ✅</span>
+            </button>
+          )}
+
           <button
             onClick={() => setIsUploadOpen(true)}
             className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs px-4 py-2 rounded-xl border border-slate-700 transition-all"
@@ -254,6 +285,21 @@ export const CaseDetails: React.FC = () => {
         </div>
       </div>
 
+      {statusSuccessMessage && (
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-bold text-emerald-400 flex items-center justify-between shadow-xl animate-fade-in">
+          <div className="flex items-center space-x-2">
+            <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
+            <span>{statusSuccessMessage}</span>
+          </div>
+          <button
+            onClick={() => setStatusSuccessMessage(null)}
+            className="text-slate-400 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Case Hero Banner */}
       <div className="p-6 md:p-8 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -267,6 +313,29 @@ export const CaseDetails: React.FC = () => {
                 FIR NO: {caseObj.fir_number}
               </span>
             )}
+
+            {/* Interactive Status Selector Dropdown */}
+            <div className="relative">
+              <select
+                value={caseObj.status || 'Active'}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                disabled={updatingStatus}
+                className={`font-mono text-xs font-black px-3 py-1 rounded-lg border focus:outline-none cursor-pointer appearance-none transition-all ${
+                  caseObj.status === 'Solved' || caseObj.status === 'Closed'
+                    ? 'bg-emerald-950/90 text-emerald-400 border-emerald-500/50 shadow-md shadow-emerald-500/20'
+                    : caseObj.status === 'Under Review'
+                    ? 'bg-amber-950/90 text-amber-400 border-amber-500/50'
+                    : caseObj.status === 'Pending Trial'
+                    ? 'bg-purple-950/90 text-purple-400 border-purple-500/50'
+                    : 'bg-cyan-950/90 text-cyan-400 border-cyan-500/50'
+                }`}
+              >
+                <option value="Active" className="bg-slate-900 text-cyan-400">STATUS: ACTIVE INVESTIGATION</option>
+                <option value="Under Review" className="bg-slate-900 text-amber-400">STATUS: UNDER REVIEW</option>
+                <option value="Pending Trial" className="bg-slate-900 text-purple-400">STATUS: PENDING COURT TRIAL</option>
+                <option value="Solved" className="bg-slate-900 text-emerald-400">STATUS: SOLVED / CLOSED ✅</option>
+              </select>
+            </div>
 
             <Badge variant={caseObj.priority === 'Critical' ? 'red' : 'amber'} size="md">
               {caseObj.priority || 'High'} Priority

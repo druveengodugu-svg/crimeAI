@@ -57,6 +57,16 @@ export const CaseHistory: React.FC = () => {
     }
   };
 
+  const handleQuickStatusChange = async (e: React.SyntheticEvent, caseId: string, newStatus: string) => {
+    e.stopPropagation();
+    try {
+      await caseService.updateCaseStatus(caseId, newStatus);
+      setCases((prev) => prev.map((c) => (c.id === caseId ? { ...c, status: newStatus } : c)));
+    } catch (err) {
+      console.error('Quick status change error:', err);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -163,6 +173,27 @@ export const CaseHistory: React.FC = () => {
                   <Badge variant={c.priority === 'Critical' ? 'red' : 'amber'}>
                     {c.priority || 'High'}
                   </Badge>
+
+                  {/* Case Status Badge / Dropdown */}
+                  <select
+                    value={c.status || 'Active'}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => handleQuickStatusChange(e, c.id, e.target.value)}
+                    className={`font-mono text-[11px] font-bold px-2 py-0.5 rounded border focus:outline-none cursor-pointer appearance-none transition-all ${
+                      c.status === 'Solved' || c.status === 'Closed'
+                        ? 'bg-emerald-950/90 text-emerald-400 border-emerald-500/50'
+                        : c.status === 'Under Review'
+                        ? 'bg-amber-950/90 text-amber-400 border-amber-500/50'
+                        : c.status === 'Pending Trial'
+                        ? 'bg-purple-950/90 text-purple-400 border-purple-500/50'
+                        : 'bg-cyan-950/90 text-cyan-400 border-cyan-500/50'
+                    }`}
+                  >
+                    <option value="Active" className="bg-slate-900 text-cyan-400">ACTIVE</option>
+                    <option value="Under Review" className="bg-slate-900 text-amber-400">UNDER REVIEW</option>
+                    <option value="Pending Trial" className="bg-slate-900 text-purple-400">PENDING TRIAL</option>
+                    <option value="Solved" className="bg-slate-900 text-emerald-400">SOLVED ✅</option>
+                  </select>
                 </div>
                 <button
                   onClick={(e) => handleDelete(e, c.id)}

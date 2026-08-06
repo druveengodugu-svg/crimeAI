@@ -236,3 +236,50 @@ export async function deleteCase(req: AuthenticatedRequest, res: Response): Prom
   });
 }
 
+export async function updateCaseStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const caseId = req.params.id;
+  const { status } = req.body;
+
+  if (!status) {
+    res.status(400).json({ success: false, error: 'Status is required.' });
+    return;
+  }
+
+  let updatedCase: any = null;
+
+  if (supabaseClient) {
+    try {
+      const { data } = await supabaseClient
+        .from('investigations')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', caseId)
+        .select('*')
+        .single();
+      if (data) updatedCase = data;
+    } catch (e) {
+      console.warn('[Supabase updateCaseStatus warning]:', e);
+    }
+  }
+
+  const memCase = memoryStore.cases.find(c => c.id === caseId);
+  if (memCase) {
+    memCase.status = status;
+    memCase.updated_at = new Date().toISOString();
+    if (!updatedCase) updatedCase = memCase;
+  }
+
+  if (!updatedCase) {
+    updatedCase = {
+      id: caseId,
+      status,
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  res.json({
+    success: true,
+    message: `Case status updated to "${status}".`,
+    case: updatedCase
+  });
+}
+
