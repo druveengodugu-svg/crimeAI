@@ -80,20 +80,20 @@ export const UploadEvidenceModal: React.FC<UploadEvidenceModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+      <div className="w-full max-w-xl glass-panel border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/40">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/60">
           <div className="flex items-center space-x-2">
             <UploadCloud className="h-5 w-5 text-cyan-400" />
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider font-space">
               Upload Case Evidence
             </h3>
           </div>
           <button
             onClick={onClose}
             disabled={uploading}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -102,7 +102,7 @@ export const UploadEvidenceModal: React.FC<UploadEvidenceModalProps> = ({
         {/* Modal Content */}
         <div className="p-6 space-y-4 overflow-y-auto">
           {error && (
-            <div className="p-3 rounded-xl bg-red-950/60 border border-red-500/30 text-red-400 text-xs flex items-center space-x-2 font-mono">
+            <div className="p-3.5 rounded-xl bg-red-950/60 border border-red-500/30 text-red-400 text-xs flex items-center space-x-2 font-mono">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{error}</span>
             </div>
@@ -121,7 +121,7 @@ export const UploadEvidenceModal: React.FC<UploadEvidenceModalProps> = ({
               p-8 border-2 border-dashed rounded-2xl text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center space-y-3
               ${dragOver 
                 ? 'border-cyan-400 bg-cyan-950/30 scale-[0.99]' 
-                : 'border-slate-800 hover:border-cyan-500/50 bg-slate-950/40 hover:bg-slate-950/80'}
+                : 'border-slate-800 hover:border-cyan-500/50 bg-slate-950/60 hover:bg-slate-950'}
             `}
           >
             <input
@@ -132,11 +132,11 @@ export const UploadEvidenceModal: React.FC<UploadEvidenceModalProps> = ({
               className="hidden"
               accept=".pdf,.docx,.doc,.txt,.png,.jpg,.jpeg,.webp,.mp4,.mov,.avi,.mkv,.mp3,.wav,.m4a,.ogg,.json,.csv,.gpx,.kml"
             />
-            <div className="h-12 w-12 rounded-full bg-cyan-950/60 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-lg shadow-cyan-500/10">
+            <div className="h-12 w-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-lg shadow-cyan-500/10">
               <UploadCloud className="h-6 w-6 stroke-[2]" />
             </div>
             <div>
-              <p className="text-xs font-bold text-white">Click or drag & drop files here to upload</p>
+              <p className="text-xs font-bold text-white font-space">Click or drag & drop files here to upload</p>
               <p className="text-[11px] text-slate-400 font-mono mt-1">
                 Supports Images, Videos, Audio, PDFs, DOCX, FIR reports, Chat logs & Location files
               </p>
@@ -151,7 +151,7 @@ export const UploadEvidenceModal: React.FC<UploadEvidenceModalProps> = ({
                 {selectedFiles.map((file, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs"
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-xs"
                   >
                     <div className="flex items-center space-x-2.5 truncate">
                       {getFileIcon(file)}
@@ -177,7 +177,7 @@ export const UploadEvidenceModal: React.FC<UploadEvidenceModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-950/40">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-950/60 font-mono">
           <button
             type="button"
             onClick={onClose}
@@ -191,18 +191,15 @@ export const UploadEvidenceModal: React.FC<UploadEvidenceModalProps> = ({
             type="button"
             onClick={handleUploadSubmit}
             disabled={uploading || selectedFiles.length === 0}
-            className="flex items-center space-x-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 text-slate-950 font-bold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 transition-all hover:scale-105"
+            className="btn-cyber-primary font-bold text-xs px-5 py-2.5 rounded-xl shadow-lg uppercase"
           >
             {uploading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin inline mr-1.5" />
                 <span>Storing in Evidence Repository...</span>
               </>
             ) : (
-              <>
-                <CheckCircle2 className="h-4 w-4 stroke-[2.5]" />
-                <span>Confirm Upload</span>
-              </>
+              <span>Upload {selectedFiles.length} Evidence Files</span>
             )}
           </button>
         </div>

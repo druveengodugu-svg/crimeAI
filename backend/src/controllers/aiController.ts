@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { runAgenticInvestigationPipeline } from '../agents/agentOrchestrator';
 import { memoryStore, supabaseClient } from '../services/supabaseService';
 import { callGeminiModel } from '../config/gemini';
+import { generateEvidenceGroundedChatReply } from '../services/smartExtractor';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function analyzeCase(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -44,6 +45,7 @@ export async function chatWithCase(req: AuthenticatedRequest, res: Response): Pr
   let timeline: any[] = [];
   let contradictions: any[] = [];
   let report: any = null;
+  let analyses: any[] = [];
 
   if (supabaseClient) {
     const { data: f } = await supabaseClient.from('evidence_files').select('*').eq('case_id', case_id);
@@ -57,22 +59,27 @@ export async function chatWithCase(req: AuthenticatedRequest, res: Response): Pr
 
     const { data: r } = await supabaseClient.from('reports').select('*').eq('case_id', case_id).single();
     report = r;
+
+    const { data: a } = await supabaseClient.from('evidence_analysis').select('*').eq('case_id', case_id);
+    analyses = a || [];
   } else {
     evidenceFiles = memoryStore.evidenceFiles.filter(f => f.case_id === case_id);
     timeline = memoryStore.timeline.filter(t => t.case_id === case_id);
     contradictions = memoryStore.contradictions.filter(ct => ct.case_id === case_id);
     report = memoryStore.reports.find(r => r.case_id === case_id);
+    analyses = memoryStore.analysis.filter(an => an.case_id === case_id);
   }
 
   const contextData = {
     evidence_files: evidenceFiles.map(e => ({ name: e.file_name, category: e.file_category })),
     timeline: timeline.map(t => `${t.event_timestamp}: ${t.title} - ${t.description}`),
     contradictions: contradictions.map(c => `${c.category}: ${c.statement1} (Source: ${c.source1}) vs ${c.statement2} (Source: ${c.source2})`),
+    processed_summaries: analyses.map(a => `${a.agent_type}: ${a.raw_summary}`),
     report_executive_summary: report?.executive_summary || 'Analysis in progress.'
   };
 
   const prompt = `You are CrimeLens AI Assistant, a law enforcement intelligence copilot.
-CRITICAL MANDATE: Answer the user's question STRICTLY based ONLY on the evidence provided in the case context below. Do not invent external facts. If the information is not present in the evidence context, explicitly state so.
+CRITICAL MANDATE: Answer the user's question STRICTLY based ONLY on the evidence provided in the case context below. Do not invent external facts. If the information is not present in the evidence context, explicitly state: "The uploaded evidence does not provide enough information to answer this question."
 
 Case Evidence Context:
 ${JSON.stringify(contextData, null, 2)}
@@ -84,47 +91,9 @@ Provide a professional, clear, bulleted intelligence response citing specific so
   let aiReply = await callGeminiModel(prompt);
 
   if (!aiReply || aiReply.trim().length === 0) {
-    const lower = message.toLowerCase();
-    if (lower.includes('vehicle') || lower.includes('car') || lower.includes('suv')) {
-      aiReply = `Based on uploaded evidence:
-• **Primary Getaway Vehicle**: CCTV video (CCTV_Camera04_Alleyway.mp4) shows a **White SUV Fortuner** idling in the alleyway and exiting at 09:13 AM.
-• **Partial License Plate**: License plate match **MH-02-AZ-9041**.
-• **Contradiction Flagged**: Security Guard Thomas Miller mentioned seeing a dark blue sedan in his audio interview, which conflicts with verified 1080p CCTV footage.`;
-    } else if (lower.includes('fir') || lower.includes('summary')) {
-      aiReply = `FIR Document Summary (FIR_Report_BankHeist.pdf):
-• **Incident Date/Time**: August 1, 2026 at 09:05 AM.
-• **Location**: Grand Apex Bank Main Vault, 742 Financial Boulevard.
-• **Crime Sections**: IPC 392 (Armed Robbery), IPC 452 (House-trespass), IPC 302 (Homicide Attempt).
-• **Complainant**: Bank Manager Rahul Sharma.
-• **Stolen Assets**: Stolen cash and bearer bonds valued at approximately $1.2 Million.`;
-    } else if (lower.includes('timeline') || lower.includes('time')) {
-      aiReply = `Case Chronological Timeline:
-• **09:05 AM**: Vault pressure alarm triggered (FIR Document).
-• **09:07 AM**: Firearms discharged in inner vault corridor (Crime Scene Photo #2).
-• **09:10 AM**: Guard Thomas Miller approached vault hallway (Witness Audio).
-• **09:12 AM - 09:13 AM**: Suspect getaway via White SUV Fortuner (CCTV Cam 04).`;
-    } else if (lower.includes('contradict') || lower.includes('discrepancy')) {
-      aiReply = `Identified Case Contradictions (Confidence Score: 95%):
-1. **Getaway Vehicle Discrepancy**:
-   - Witness Thomas Miller (Witness_Guard_Interview.mp3): Stated suspect fled in a **Dark Blue Sedan**.
-   - Rear CCTV Footage (CCTV_Camera04_Alleyway.mp4): Captures a **White SUV** accelerating away at 09:13 AM.
-2. **Suspect Count Discrepancy**:
-   - FIR Document listed 3 suspects inside the lobby.
-   - CCTV Exit footage captured 2 individuals loading duffel bags into the passenger door.`;
-    } else if (lower.includes('rahul') || lower.includes('person') || lower.includes('who')) {
-      aiReply = `Persons Mentioned in Case Evidence:
-• **Rahul Sharma**: Bank Manager and official complainant who filed the initial FIR.
-• **Officer Thomas Miller**: Security Guard on duty near main lobby counter at 09:05 AM.
-• **Lead Insp. Marcus Vance**: Officer assigned to lead the homicide and heist investigation.
-• **Suspect 1**: Tall male (~6ft), wearing dark grey hoodie and black gloves (CCTV & Photo).
-• **Suspect 2**: Medium build male carrying heavy black duffel bag.`;
-    } else {
-      aiReply = `Based on the uploaded evidence for Case #${report?.case_number || 'CR-2026-9041'}:
-• The main incident occurred at Grand Apex Bank main vault at 09:05 AM.
-• Evidence includes FIR document, 9mm shell casings, CCTV footage of a White SUV getaway vehicle (plate MH-02-AZ-9041), and witness audio recordings.
-• 8-Agent AI pipeline has completed analysis with an overall confidence score of 93%.`;
-    }
+    aiReply = generateEvidenceGroundedChatReply(contextData, message);
   }
+
 
   // Save chat records
   const userChatObj = {

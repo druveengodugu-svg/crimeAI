@@ -1,5 +1,6 @@
 import fs from 'fs';
 import { callGeminiModel } from '../config/gemini';
+import { extractSmartImageAnalysis } from '../services/smartExtractor';
 
 export interface ImageAgentResult {
   description: string;
@@ -13,26 +14,32 @@ export interface ImageAgentResult {
     persons: string[];
     clothing: string[];
   };
+  possible_evidence?: string[];
+  suspicious_observations?: string[];
+  environmental_conditions?: string;
+  ocr_text?: string;
+  suggested_leads?: string[];
   confidence_score: number;
 }
 
 export async function processImageAgent(filePath: string, originalName: string): Promise<ImageAgentResult> {
   let imageBase64 = '';
+  let fileBuf: Buffer | undefined;
   if (fs.existsSync(filePath)) {
     try {
-      const buffer = fs.readFileSync(filePath);
-      imageBase64 = buffer.toString('base64');
+      fileBuf = fs.readFileSync(filePath);
+      imageBase64 = fileBuf.toString('base64');
     } catch (err) {
       console.warn(`[Image Agent] Could not read image ${originalName}`, err);
     }
   }
 
   const prompt = `You are the Image Analysis Agent for CrimeLens AI Forensic Unit.
-Analyze this crime scene photograph and output structured details in valid JSON format:
+Analyze this crime scene photograph (${originalName}) and output structured details in valid JSON format:
 {
-  "description": "Comprehensive visual narrative of the image",
+  "description": "Comprehensive visual narrative of what is strictly visible in the image",
   "detected_objects": {
-    "weapons": ["List of firearms, knives, blunt instruments"],
+    "weapons": ["List of firearms, knives, blunt instruments visible"],
     "vehicles": ["List of visible vehicles with color and make"],
     "blood_stains": ["Location and spatter analysis of blood stains"],
     "destroyed_objects": ["Pry marks, broken glass, forced locks"],
@@ -41,16 +48,23 @@ Analyze this crime scene photograph and output structured details in valid JSON 
     "persons": ["Visible individuals or silhouettes"],
     "clothing": ["Colors and types of clothing worn"]
   },
+  "possible_evidence": ["Key physical items"],
+  "suspicious_observations": ["Visual anomalies"],
+  "environmental_conditions": "Lighting, indoor/outdoor, shadows",
+  "ocr_text": "Extracted text if visible",
+  "suggested_leads": ["Actionable forensic follow-ups"],
   "confidence_score": 92
 }
-Return ONLY valid JSON.`;
+Return ONLY valid JSON based strictly on the uploaded image.`;
 
   let mediaParts: any[] = [];
   if (imageBase64) {
+    const ext = originalName.split('.').pop()?.toLowerCase();
+    const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
     mediaParts = [{
       inlineData: {
         data: imageBase64,
-        mimeType: 'image/jpeg'
+        mimeType
       }
     }];
   }
@@ -63,7 +77,7 @@ Return ONLY valid JSON.`;
     if (jsonStart !== -1 && jsonEnd !== -1) {
       const parsed = JSON.parse(aiOutput.substring(jsonStart, jsonEnd + 1));
       return {
-        description: parsed.description || 'Crime scene photo processed.',
+        description: parsed.description || `Forensic visual analysis of ${originalName}.`,
         detected_objects: {
           weapons: parsed.detected_objects?.weapons || [],
           vehicles: parsed.detected_objects?.vehicles || [],
@@ -74,25 +88,19 @@ Return ONLY valid JSON.`;
           persons: parsed.detected_objects?.persons || [],
           clothing: parsed.detected_objects?.clothing || []
         },
-        confidence_score: parsed.confidence_score || 90
+        possible_evidence: parsed.possible_evidence || [],
+        suspicious_observations: parsed.suspicious_observations || [],
+        environmental_conditions: parsed.environmental_conditions || 'Indoor artificial lighting',
+        ocr_text: parsed.ocr_text || '',
+        suggested_leads: parsed.suggested_leads || [],
+        confidence_score: parsed.confidence_score || 92
       };
     }
   } catch (err) {
-    console.warn('[Image Agent] Parsing failed, using structured forensic baseline.');
+    console.warn('[Image Agent] Parsing failed, calling Smart Evidence Extractor.');
   }
 
-  return {
-    description: `High-resolution forensic image analysis of ${originalName}. Shows heavy mechanical door pry marks around vault mechanism, 9mm shell casings on floor, and footprints leading toward rear emergency escape corridor.`,
-    detected_objects: {
-      weapons: ['9mm Semi-automatic Pistol Shell Casings (x2)'],
-      vehicles: ['White SUV visible through exterior glass window'],
-      blood_stains: ['Subtle blood droplets near vault door handle (L-4)'],
-      destroyed_objects: ['Pried vault locking mechanism', 'Smashed security keypad'],
-      suspicious_objects: ['Black duffel bag strap fragment', 'Steel crowbar'],
-      number_plates: ['MH-02-AZ-9041 (Partial match on SUV)'],
-      persons: ['Single adult male silhouette fleeing frame left'],
-      clothing: ['Dark grey hooded sweater', 'Black tactical gloves', 'Black work boots']
-    },
-    confidence_score: 93
-  };
+  // Use Dynamic Evidence Extractor
+  return extractSmartImageAnalysis(filePath, originalName, fileBuf);
 }
+

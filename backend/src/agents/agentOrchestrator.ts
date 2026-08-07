@@ -24,15 +24,15 @@ export async function runAgenticInvestigationPipeline(caseId: string): Promise<a
     evidenceFiles = memoryStore.evidenceFiles.filter(f => f.case_id === caseId);
   }
 
-  if (evidenceFiles.length === 0) {
-    // If no specific uploaded files exist yet for new case, inject demonstration evidence items
+  if (evidenceFiles.length === 0 && (caseId === '11111111-1111-1111-1111-111111111111' || caseId === 'demo')) {
+    // Only inject demonstration evidence items for the demo case
     evidenceFiles = memoryStore.evidenceFiles;
   }
 
   const agentOutputs: Record<string, any> = {};
   const processedSummaries: any[] = [];
 
-  // Phase 1: Independent File Analysis (Agents 1-4)
+  // Phase 1: Independent File Analysis (Agents 1-4 with Per-File Caching)
   for (const file of evidenceFiles) {
     const fileCategory = (file.file_category || '').toLowerCase();
     const fileType = (file.file_type || '').toLowerCase();
@@ -42,21 +42,59 @@ export async function runAgenticInvestigationPipeline(caseId: string): Promise<a
     let analysisResult: any = null;
     let agentName = '';
 
-    if (fileCategory.includes('fir') || fileType.includes('pdf') || fileType.includes('doc')) {
-      agentName = 'DocumentAgent';
-      analysisResult = await processDocumentAgent(filePath, fileName);
-    } else if (fileCategory.includes('photo') || fileCategory.includes('image') || ['png', 'jpg', 'jpeg'].includes(fileType)) {
-      agentName = 'ImageAgent';
-      analysisResult = await processImageAgent(filePath, fileName);
-    } else if (fileCategory.includes('cctv') || fileCategory.includes('video') || ['mp4', 'avi', 'mov'].includes(fileType)) {
-      agentName = 'VideoAgent';
-      analysisResult = await processVideoAgent(filePath, fileName);
-    } else if (fileCategory.includes('witness') || fileCategory.includes('audio') || ['mp3', 'wav', 'm4a'].includes(fileType)) {
-      agentName = 'AudioAgent';
-      analysisResult = await processAudioAgent(filePath, fileName);
+    // Check for cached analysis per file
+    let cachedItem: any = null;
+    if (supabaseClient) {
+      const { data } = await supabaseClient.from('evidence_analysis').select('*').eq('file_id', file.id).single();
+      if (data) cachedItem = data;
     } else {
-      agentName = 'DocumentAgent';
-      analysisResult = await processDocumentAgent(filePath, fileName);
+      cachedItem = memoryStore.analysis.find(a => a.file_id === file.id);
+    }
+
+    if (cachedItem && cachedItem.analysis_data) {
+      agentName = cachedItem.agent_type || 'CachedAgent';
+      analysisResult = cachedItem.analysis_data;
+      console.log(`[Agent Orchestrator] Using cached analysis for file: ${fileName} (${file.id})`);
+    } else {
+      if (fileCategory.includes('fir') || fileType.includes('pdf') || fileType.includes('doc')) {
+        agentName = 'DocumentAgent';
+        analysisResult = await processDocumentAgent(filePath, fileName);
+      } else if (fileCategory.includes('photo') || fileCategory.includes('image') || ['png', 'jpg', 'jpeg'].includes(fileType)) {
+        agentName = 'ImageAgent';
+        analysisResult = await processImageAgent(filePath, fileName);
+      } else if (fileCategory.includes('cctv') || fileCategory.includes('video') || ['mp4', 'avi', 'mov'].includes(fileType)) {
+        agentName = 'VideoAgent';
+        analysisResult = await processVideoAgent(filePath, fileName);
+      } else if (fileCategory.includes('witness') || fileCategory.includes('audio') || ['mp3', 'wav', 'm4a'].includes(fileType)) {
+        agentName = 'AudioAgent';
+        analysisResult = await processAudioAgent(filePath, fileName);
+      } else {
+        agentName = 'DocumentAgent';
+        analysisResult = await processDocumentAgent(filePath, fileName);
+      }
+
+      // Cache analysis result in database/memory
+      if (supabaseClient) {
+        await supabaseClient.from('evidence_analysis').insert({
+          file_id: file.id,
+          case_id: caseId,
+          agent_type: agentName,
+          raw_summary: JSON.stringify(analysisResult),
+          extracted_entities: analysisResult.extracted_entities || analysisResult.detected_objects || {},
+          analysis_data: analysisResult
+        });
+      } else {
+        memoryStore.analysis.push({
+          id: uuidv4(),
+          file_id: file.id,
+          case_id: caseId,
+          agent_type: agentName,
+          raw_summary: JSON.stringify(analysisResult),
+          extracted_entities: analysisResult.extracted_entities || analysisResult.detected_objects || {},
+          analysis_data: analysisResult,
+          created_at: new Date().toISOString()
+        });
+      }
     }
 
     agentOutputs[file.id] = { agent: agentName, result: analysisResult };
@@ -67,29 +105,6 @@ export async function runAgenticInvestigationPipeline(caseId: string): Promise<a
       agent_name: agentName,
       result: analysisResult
     });
-
-    // Store in database
-    if (supabaseClient) {
-      await supabaseClient.from('evidence_analysis').insert({
-        file_id: file.id,
-        case_id: caseId,
-        agent_type: agentName,
-        raw_summary: JSON.stringify(analysisResult),
-        extracted_entities: analysisResult.extracted_entities || analysisResult.detected_objects || {},
-        analysis_data: analysisResult
-      });
-    } else {
-      memoryStore.analysis.push({
-        id: uuidv4(),
-        file_id: file.id,
-        case_id: caseId,
-        agent_type: agentName,
-        raw_summary: JSON.stringify(analysisResult),
-        extracted_entities: analysisResult.extracted_entities || analysisResult.detected_objects || {},
-        analysis_data: analysisResult,
-        created_at: new Date().toISOString()
-      });
-    }
   }
 
   // Phase 2: Evidence Correlation (Agent 5)

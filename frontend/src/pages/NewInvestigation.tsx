@@ -17,6 +17,7 @@ import {
 import { caseService } from '../services/caseService';
 import { aiService } from '../services/aiService';
 import { useAuth } from '../context/AuthContext';
+import { soundFx } from '../utils/soundEffects';
 
 export const NewInvestigation: React.FC = () => {
   const { user } = useAuth();
@@ -42,6 +43,7 @@ export const NewInvestigation: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState('');
 
   const handleAutofillDemo = () => {
+    soundFx.playClick();
     setTitle('Grand Vault Armed Heist & Homicide');
     setCaseNumber('CR-2026-9041');
     setFirNumber('FIR-2026-0894');
@@ -54,11 +56,13 @@ export const NewInvestigation: React.FC = () => {
   };
 
   const handleLoadFullDemoCase = async () => {
+    soundFx.playClick();
     setIsSubmitting(true);
     setStatusMessage('Loading complete pre-analyzed demo case dossier...');
     try {
       const res = await caseService.loadDemoCase();
       if (res.case) {
+        soundFx.playSuccess();
         navigate(`/cases/${res.case.id}`);
       }
     } catch (err: any) {
@@ -80,6 +84,7 @@ export const NewInvestigation: React.FC = () => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      soundFx.playScanBeep();
       const droppedFiles = Array.from(e.dataTransfer.files);
       setFiles((prev) => [...prev, ...droppedFiles]);
     }
@@ -87,12 +92,14 @@ export const NewInvestigation: React.FC = () => {
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
+      soundFx.playScanBeep();
       const selected = Array.from(e.target.files);
       setFiles((prev) => [...prev, ...selected]);
     }
   };
 
   const removeFile = (index: number) => {
+    soundFx.playClick();
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -107,6 +114,7 @@ export const NewInvestigation: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    soundFx.playScanBeep();
     setError(null);
     setIsSubmitting(true);
     setUploadProgress(10);
@@ -146,6 +154,7 @@ export const NewInvestigation: React.FC = () => {
 
       setUploadProgress(100);
       setStatusMessage('Analysis complete! Redirecting to case dossier...');
+      soundFx.playSuccess();
 
       setTimeout(() => {
         navigate(`/cases/${caseId}`);
@@ -158,22 +167,22 @@ export const NewInvestigation: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="space-y-8 max-w-4xl mx-auto animate-fade-in">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono shadow-sm">
             <FolderPlus className="h-3.5 w-3.5" />
             <span>New Criminal Investigation Setup</span>
           </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">Create Investigation Case</h1>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight font-mono">Create Investigation Case</h1>
         </div>
 
         <div className="flex items-center space-x-3">
           <button
             type="button"
             onClick={handleAutofillDemo}
-            className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-semibold text-cyan-400 hover:bg-slate-800 transition-all flex items-center space-x-1.5"
+            className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono font-semibold text-cyan-400 hover:bg-slate-800 transition-all flex items-center space-x-1.5 shadow-md"
           >
             <Sparkles className="h-3.5 w-3.5" />
             <span>Auto-fill Demo Data</span>
@@ -183,20 +192,21 @@ export const NewInvestigation: React.FC = () => {
             type="button"
             onClick={handleLoadFullDemoCase}
             disabled={isSubmitting}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs transition-all shadow-md flex items-center space-x-1.5"
+            className="btn-cyber-emerald text-xs px-4 py-2 rounded-xl flex items-center space-x-1.5 font-mono uppercase tracking-wider"
           >
             <Zap className="h-3.5 w-3.5 fill-slate-950 stroke-none" />
-            <span>⚡ Direct Load Demo Dossier</span>
+            <span>⚡ Open Demo Case</span>
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center space-x-2">
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-xs font-mono text-red-400 flex items-center space-x-2 shadow-lg">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           <span>{error}</span>
         </div>
       )}
+
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Case Metadata Section */}

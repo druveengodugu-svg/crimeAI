@@ -46,24 +46,51 @@ Return ONLY valid JSON array.`;
     console.warn('[Contradiction Agent] Parsing fallback triggered.');
   }
 
-  return [
-    {
-      statement1: 'Security Guard witness claimed seeing a dark blue sedan parked near the service gate at 09:05 AM.',
-      source1: 'Witness_Guard_Interview.mp3',
-      statement2: 'Rear Alleyway CCTV Video (Cam 04) clearly shows a White SUV idling at 09:08 AM to 09:13 AM.',
-      source2: 'CCTV_Camera04_Alleyway.mp4',
-      confidence_score: 95,
-      explanation: 'Critical conflict between witness audio testimony and multi-angle CCTV footage regarding getaway vehicle model and color.',
-      category: 'Vehicle Type & Color Conflict'
-    },
-    {
-      statement1: 'Initial FIR document listed 3 unknown armed suspects inside vault lobby.',
-      source1: 'FIR_Report_BankHeist.pdf',
-      source2: 'CCTV_Camera04_Alleyway.mp4',
-      statement2: 'CCTV exit footage captured only 2 individuals carrying stolen duffel bags into getaway vehicle.',
-      confidence_score: 88,
-      explanation: 'Potential 3rd suspect acting as getaway driver inside the vehicle or inside accomplice unaccounted for in exit video.',
-      category: 'Suspect Count Discrepancy'
-    }
-  ];
+  // Dynamic evidence-based contradiction detection fallback
+  const dynamicContradictions: ContradictionItem[] = [];
+
+  const vehiclesFound: Array<{ source: string; vehicle: string }> = [];
+  const timesFound: Array<{ source: string; time: string }> = [];
+  const personsFound: Array<{ source: string; person: string }> = [];
+
+  evidenceDataList.forEach(item => {
+    const src = item.file_name || 'Evidence_File';
+    const res = item.result || {};
+
+    const extVeh = res.detected_entities?.vehicles || res.detected_objects?.vehicles || res.extracted_entities?.vehicle_numbers || [];
+    extVeh.forEach((v: string) => vehiclesFound.push({ source: src, vehicle: v }));
+
+    const extTimes = res.timestamps?.map((t: any) => t.time) || res.extracted_entities?.dates || [];
+    extTimes.forEach((t: string) => timesFound.push({ source: src, time: t }));
+
+    const extPersons = res.detected_entities?.persons || res.detected_objects?.persons || res.extracted_entities?.names || [];
+    extPersons.forEach((p: string) => personsFound.push({ source: src, person: p }));
+  });
+
+  if (vehiclesFound.length >= 2 && vehiclesFound[0].vehicle !== vehiclesFound[1].vehicle) {
+    dynamicContradictions.push({
+      statement1: `Evidence (${vehiclesFound[0].source}) references vehicle: "${vehiclesFound[0].vehicle}"`,
+      source1: vehiclesFound[0].source,
+      statement2: `Evidence (${vehiclesFound[1].source}) references vehicle: "${vehiclesFound[1].vehicle}"`,
+      source2: vehiclesFound[1].source,
+      confidence_score: 91,
+      explanation: 'Discrepancy identified between vehicle models/plates across separate evidence items.',
+      category: 'Vehicle Description Discrepancy'
+    });
+  }
+
+  if (timesFound.length >= 2 && timesFound[0].time !== timesFound[1].time) {
+    dynamicContradictions.push({
+      statement1: `Recorded time mark in ${timesFound[0].source}: ${timesFound[0].time}`,
+      source1: timesFound[0].source,
+      statement2: `Recorded time mark in ${timesFound[1].source}: ${timesFound[1].time}`,
+      source2: timesFound[1].source,
+      confidence_score: 87,
+      explanation: 'Variance in incident time markers recorded across separate evidence files.',
+      category: 'Time Marker Variance'
+    });
+  }
+
+  return dynamicContradictions;
 }
+

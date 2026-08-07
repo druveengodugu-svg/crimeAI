@@ -1,4 +1,5 @@
 import { callGeminiModel } from '../config/gemini';
+import { synthesizeCrossEvidenceCorrelation } from '../services/smartExtractor';
 
 export interface GraphNode {
   id: string;
@@ -48,11 +49,10 @@ Output valid JSON format:
   },
   "graph": {
     "nodes": [
-      {"id": "node1", "label": "Rahul Sharma", "category": "Person", "sourceFile": "FIR_Report_BankHeist.pdf"},
-      {"id": "node2", "label": "White SUV", "category": "Vehicle", "sourceFile": "CCTV_Camera04_Alleyway.mp4"}
+      {"id": "node1", "label": "Entity Label", "category": "Person", "sourceFile": "Evidence_File.pdf"}
     ],
     "edges": [
-      {"source": "node1", "target": "node2", "relation": "Spotted fleeing near", "confidence": 92}
+      {"source": "node1", "target": "node2", "relation": "Relationship description", "confidence": 92}
     ]
   }
 }
@@ -82,37 +82,9 @@ Return ONLY valid JSON.`;
       };
     }
   } catch (err) {
-    console.warn('[Correlation Agent] Parsing fallback triggered.');
+    console.warn('[Correlation Agent] Parsing fallback triggered, calling Dynamic Cross-Evidence Synthesizer.');
   }
 
-  // High-quality structured fallback correlation graph
-  return {
-    summary: 'Evidence Correlation Agent identified strong cross-modal links between FIR documentation, CCTV footage, and crime scene photographs.',
-    matches: {
-      matching_names: ['Rahul Sharma (Supervisor)', 'Security Officer Thomas Miller', 'Vikram Vance (Suspect Lead)'],
-      matching_vehicles: ['White SUV Fortuner (Seen in CCTV & Crime Scene Photo)', 'Dark Blue Sedan (Mentioned by witness)'],
-      matching_locations: ['Grand Apex Bank Main Vault', 'Rear Service Alleyway Gate', '742 Financial Boulevard'],
-      matching_dates: ['2026-08-01'],
-      matching_timestamps: ['09:05 AM', '09:08 AM', '09:12 AM', '09:15 AM'],
-      matching_objects: ['Black Heavy-Duty Duffel Bag', '9mm Semi-automatic Pistol', 'Steel Crowbar']
-    },
-    graph: {
-      nodes: [
-        { id: 'n1', label: 'Rahul Sharma', category: 'Person', sourceFile: 'FIR_Report_BankHeist.pdf' },
-        { id: 'n2', label: 'Officer Thomas Miller', category: 'Person', sourceFile: 'Witness_Guard_Interview.mp3' },
-        { id: 'n3', label: 'White SUV (Fortuner)', category: 'Vehicle', sourceFile: 'CCTV_Camera04_Alleyway.mp4' },
-        { id: 'n4', label: 'Blue Sedan', category: 'Vehicle', sourceFile: 'Witness_Guard_Interview.mp3' },
-        { id: 'n5', label: 'Main Vault Door', category: 'Location', sourceFile: 'CrimeScene_VaultDoor.jpg' },
-        { id: 'n6', label: '9mm Shell Casings', category: 'Weapon', sourceFile: 'CrimeScene_VaultDoor.jpg' },
-        { id: 'n7', label: 'Black Duffel Bag', category: 'Object', sourceFile: 'CCTV_Camera04_Alleyway.mp4' }
-      ],
-      edges: [
-        { source: 'n1', target: 'n5', relation: 'Filed alarm complaint for', confidence: 98 },
-        { source: 'n2', target: 'n4', relation: 'Reported seeing', confidence: 75 },
-        { source: 'n3', target: 'n5', relation: 'Parked in alleyway behind', confidence: 95 },
-        { source: 'n3', target: 'n7', relation: 'Loaded stolen cash into', confidence: 92 },
-        { source: 'n6', target: 'n5', relation: 'Found on floor adjacent to', confidence: 96 }
-      ]
-    }
-  };
+  return synthesizeCrossEvidenceCorrelation(evidenceDataList);
 }
+

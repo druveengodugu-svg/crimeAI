@@ -42,38 +42,68 @@ Return ONLY valid JSON array.`;
     console.warn('[Timeline Agent] Parsing fallback triggered.');
   }
 
-  return [
+  // Dynamic evidence-based timeline extraction fallback
+  const dynamicTimeline: TimelineItem[] = [];
+
+  evidenceDataList.forEach((item) => {
+    const fileName = item.file_name || 'Evidence_File';
+    const fileType = item.file_type || 'file';
+    const res = item.result || {};
+
+    if (res.timestamps && Array.isArray(res.timestamps)) {
+      res.timestamps.forEach((ts: any) => {
+        dynamicTimeline.push({
+          event_timestamp: ts.time || 'Timestamp Logged',
+          title: `Activity recorded in ${fileName}`,
+          description: ts.description || 'Activity captured in video feed.',
+          source_name: fileName,
+          source_type: fileType,
+          confidence_score: res.confidence_score || 92
+        });
+      });
+    } else if (res.timeline_mentions && Array.isArray(res.timeline_mentions)) {
+      res.timeline_mentions.forEach((tm: any) => {
+        dynamicTimeline.push({
+          event_timestamp: tm.time || 'Statement Timestamp',
+          title: `Witness statement in ${fileName}`,
+          description: tm.statement || 'Recorded testimony statement.',
+          source_name: fileName,
+          source_type: fileType,
+          confidence_score: res.confidence_score || 90
+        });
+      });
+    } else if (res.extracted_entities?.dates && Array.isArray(res.extracted_entities.dates)) {
+      res.extracted_entities.dates.forEach((d: string) => {
+        dynamicTimeline.push({
+          event_timestamp: d,
+          title: `Document event in ${fileName}`,
+          description: `Document record timestamp in ${fileName}: ${res.summary || 'Official filing details.'}`,
+          source_name: fileName,
+          source_type: fileType,
+          confidence_score: 94
+        });
+      });
+    } else {
+      dynamicTimeline.push({
+        event_timestamp: 'Incident Record',
+        title: `Evidence analysis for ${fileName}`,
+        description: res.description || res.summary || res.witness_summary || `Visual / analytical findings from ${fileName}`,
+        source_name: fileName,
+        source_type: fileType,
+        confidence_score: res.confidence_score || 88
+      });
+    }
+  });
+
+  return dynamicTimeline.length > 0 ? dynamicTimeline : [
     {
-      event_timestamp: '09:05 AM',
-      title: 'Main Vault Door Mechanical Breach',
-      description: 'Security system registered forced lock failure and pressure drop at Grand Apex Bank main vault.',
-      source_name: 'FIR_Report_BankHeist.pdf',
-      source_type: 'pdf',
-      confidence_score: 96
-    },
-    {
-      event_timestamp: '09:07 AM',
-      title: 'Gunshot Fired & Guard Encounter',
-      description: 'Two 9mm rounds discharged near the vault hallway as suspects confronted security personnel.',
-      source_name: 'CrimeScene_VaultDoor.jpg',
-      source_type: 'image',
-      confidence_score: 93
-    },
-    {
-      event_timestamp: '09:10 AM',
-      title: 'Witness Observation & Guard Warning Beep',
-      description: 'Guard Miller approached hallway and observed two hooded individuals loading duffel bags.',
-      source_name: 'Witness_Guard_Interview.mp3',
-      source_type: 'audio',
+      event_timestamp: 'Initial Upload',
+      title: 'Evidence Registered',
+      description: 'Primary evidence file registered into investigation workspace.',
+      source_name: 'Case File',
+      source_type: 'system',
       confidence_score: 90
-    },
-    {
-      event_timestamp: '09:12 AM',
-      title: 'Suspect Getaway via Alleyway CCTV',
-      description: 'White SUV Fortuner captured on camera 04 idling in alleyway before suspects entered passenger side and sped off North.',
-      source_name: 'CCTV_Camera04_Alleyway.mp4',
-      source_type: 'video',
-      confidence_score: 95
     }
   ];
 }
+

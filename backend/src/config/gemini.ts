@@ -1,35 +1,38 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ENV } from './env';
 
-let genAI: GoogleGenerativeAI | null = null;
-
-if (ENV.GEMINI_API_KEY) {
-  try {
-    genAI = new GoogleGenerativeAI(ENV.GEMINI_API_KEY);
-    console.log('[Gemini AI] Initialized Google Gemini SDK successfully.');
-  } catch (err) {
-    console.warn('[Gemini AI] Failed to initialize Gemini client.', err);
-  }
-} else {
-  console.log('[Gemini AI] GEMINI_API_KEY not configured. Running in Fallback Agentic Simulation Mode.');
-}
-
-export { genAI };
-
 export async function callGeminiModel(prompt: string, imageOrMediaParts: any[] = []): Promise<string> {
-  if (genAI) {
+  const apiKey = process.env.GEMINI_API_KEY || ENV.GEMINI_API_KEY;
+
+  if (apiKey && apiKey.trim().length > 0) {
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      if (imageOrMediaParts.length > 0) {
-        const result = await model.generateContent([prompt, ...imageOrMediaParts]);
-        return result.response.text();
-      } else {
-        const result = await model.generateContent(prompt);
-        return result.response.text();
+      const genAI = new GoogleGenerativeAI(apiKey.trim());
+      
+      // Try gemini-1.5-flash first, fallback to gemini-2.0-flash or gemini-1.5-pro
+      const modelsToTry = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+      
+      for (const modelName of modelsToTry) {
+        try {
+          const model = genAI.getGenerativeModel({ model: modelName });
+          let result;
+          if (imageOrMediaParts.length > 0) {
+            result = await model.generateContent([prompt, ...imageOrMediaParts]);
+          } else {
+            result = await model.generateContent(prompt);
+          }
+          const responseText = result.response.text();
+          if (responseText && responseText.trim().length > 0) {
+            console.log(`[Gemini AI] Successfully generated content using model: ${modelName}`);
+            return responseText;
+          }
+        } catch (err: any) {
+          console.warn(`[Gemini AI] Model ${modelName} call failed:`, err?.message || err);
+        }
       }
     } catch (err) {
-      console.warn('[Gemini AI Call Failed] Falling back to structured response generator:', err);
+      console.warn('[Gemini AI Call Failed] Falling back to structured extractor:', err);
     }
   }
   return '';
 }
+

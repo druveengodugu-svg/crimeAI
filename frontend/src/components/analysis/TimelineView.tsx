@@ -3,10 +3,11 @@ import { Clock, FileText, Image as ImageIcon, Video, Mic, CheckCircle } from 'lu
 import { TimelineEvent } from '../../types';
 
 interface TimelineViewProps {
-  events: TimelineEvent[];
+  caseId?: string;
+  events?: TimelineEvent[];
 }
 
-export const TimelineView: React.FC<TimelineViewProps> = ({ events }) => {
+export const TimelineView: React.FC<TimelineViewProps> = ({ events = [] }) => {
   const getSourceIcon = (type?: string) => {
     switch (type) {
       case 'pdf': case 'doc': return FileText;
@@ -17,43 +18,52 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ events }) => {
     }
   };
 
+  if (events.length === 0) {
+    return (
+      <div className="p-8 text-center glass-panel rounded-2xl border border-slate-800 space-y-2">
+        <Clock className="h-8 w-8 text-cyan-400/50 mx-auto" />
+        <p className="text-xs text-slate-400 font-mono">No timeline events extracted yet. Run AI case analysis to build timeline sequence.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-gradient-to-b before:from-cyan-500 before:via-blue-600 before:to-slate-800">
+    <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-gradient-to-b before:from-cyan-400 before:via-blue-500 before:to-violet-600">
       {events.map((event, idx) => {
         const Icon = getSourceIcon(event.source_type);
 
         return (
           <div key={event.id || idx} className="relative group">
             {/* Timeline Node Icon */}
-            <div className="absolute -left-6 top-1.5 h-5 w-5 rounded-full bg-slate-900 border-2 border-cyan-400 flex items-center justify-center group-hover:scale-125 transition-transform shadow-md shadow-cyan-500/20">
-              <div className="h-1.5 w-1.5 rounded-full bg-cyan-400"></div>
+            <div className="absolute -left-6 top-1.5 h-5 w-5 rounded-full bg-slate-950 border-2 border-cyan-400 flex items-center justify-center group-hover:scale-125 transition-transform shadow-md shadow-cyan-500/30">
+              <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></div>
             </div>
 
             {/* Card Content */}
-            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800/80 hover:border-slate-700 transition-all duration-200 space-y-2">
+            <div className="p-5 rounded-2xl cyber-card border border-slate-800 space-y-2.5 shadow-xl">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center space-x-2">
-                  <span className="font-mono text-xs font-bold text-cyan-400 bg-cyan-950/80 border border-cyan-500/30 px-2 py-0.5 rounded">
+                  <span className="font-mono text-xs font-bold text-cyan-400 bg-cyan-950/80 border border-cyan-500/30 px-2.5 py-0.5 rounded-lg shadow-sm">
                     {event.event_timestamp}
                   </span>
-                  <h4 className="text-sm font-bold text-white tracking-wide">{event.title}</h4>
+                  <h4 className="text-sm font-bold text-white tracking-wide font-space">{event.title}</h4>
                 </div>
 
                 <div className="flex items-center space-x-2">
                   {event.source_name && (
-                    <span className="flex items-center text-[10px] font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700">
-                      <Icon className="h-3 w-3 mr-1 text-slate-300" />
+                    <span className="flex items-center text-[10px] font-mono text-slate-300 bg-slate-800/80 px-2 py-0.5 rounded-md border border-slate-700">
+                      <Icon className="h-3 w-3 mr-1 text-cyan-400" />
                       {event.source_name}
                     </span>
                   )}
-                  <span className="flex items-center text-[10px] font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2 py-0.5 rounded">
+                  <span className="flex items-center text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2 py-0.5 rounded-md">
                     <CheckCircle className="h-3 w-3 mr-1 text-emerald-400" />
                     {event.confidence_score}%
                   </span>
                 </div>
               </div>
 
-              <p className="text-xs text-slate-300 leading-relaxed">{event.description}</p>
+              <p className="text-xs text-slate-300 leading-relaxed font-sans">{event.description}</p>
             </div>
           </div>
         );
