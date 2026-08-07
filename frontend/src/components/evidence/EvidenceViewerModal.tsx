@@ -608,13 +608,19 @@ EVIDENCE TAGS: ${evidence.tags.join(', ')}`
                   </div>
 
                   {/* 1. Investigation Summary */}
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5 font-mono">
                     <h5 className="text-[11px] font-mono font-bold text-cyan-400 uppercase flex items-center gap-1.5">
-                      <FileText className="h-3.5 w-3.5" /> Investigation Summary
+                      <FileText className="h-3.5 w-3.5" /> Investigation Summary & AI Observation
                     </h5>
                     <p className="text-slate-300 leading-relaxed font-sans text-xs">
                       {analysis.summary || analysis.description || analysis.witness_summary || 'Evidence file analyzed.'}
                     </p>
+                    {analysis.reasoning && (
+                      <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 font-sans">
+                        <span className="font-bold font-mono text-cyan-400">AI Reasoning: </span>
+                        {analysis.reasoning}
+                      </div>
+                    )}
                   </div>
 
                   {/* 2. Key Findings / Suspicious Observations */}
@@ -635,16 +641,21 @@ EVIDENCE TAGS: ${evidence.tags.join(', ')}`
                   {(analysis.detected_objects || analysis.detected_entities || analysis.extracted_entities) && (
                     <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
                       <h5 className="text-[11px] font-mono font-bold text-emerald-400 uppercase flex items-center gap-1.5">
-                        <Bot className="h-3.5 w-3.5 text-emerald-400" /> Extracted Entities & Objects
+                        <Bot className="h-3.5 w-3.5 text-emerald-400" /> Detected Information & Objects
                       </h5>
                       <div className="space-y-2">
                         {Object.entries(analysis.detected_objects || analysis.detected_entities || analysis.extracted_entities).map(
                           ([key, value]: [string, any], idx) => {
                             if (!value || (Array.isArray(value) && value.length === 0)) return null;
                             return (
-                              <div key={idx} className="space-y-1">
-                                <span className="text-[10px] font-mono text-slate-400 uppercase">{key.replace('_', ' ')}:</span>
-                                <div className="flex flex-wrap gap-1">
+                              <div key={idx} className="space-y-1 p-2 rounded bg-slate-900/60 border border-slate-800/80">
+                                <div className="flex justify-between items-center text-[10px] font-mono text-cyan-400 uppercase font-bold">
+                                  <span>{key.replace('_', ' ')}:</span>
+                                  <span className="text-emerald-400 text-[9px] bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                                    Evidence Used: {evidence.file_name}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-1 pt-1">
                                   {Array.isArray(value) ? (
                                     value.map((v, i) => (
                                       <span key={i} className="text-[10px] bg-slate-800 text-cyan-300 px-2 py-0.5 rounded font-mono border border-slate-700">
@@ -666,11 +677,15 @@ EVIDENCE TAGS: ${evidence.tags.join(', ')}`
                   {/* 4. Timestamps / Timeline mentions */}
                   {((analysis.timestamps && analysis.timestamps.length > 0) || (analysis.timeline_mentions && analysis.timeline_mentions.length > 0)) && (
                     <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-                      <h5 className="text-[11px] font-mono font-bold text-indigo-400 uppercase">Timestamp Key Frames</h5>
+                      <h5 className="text-[11px] font-mono font-bold text-indigo-400 uppercase">Timestamp Key Frames & Evidence Locations</h5>
                       <div className="space-y-1.5">
                         {(analysis.timestamps || analysis.timeline_mentions).map((ts: any, idx: number) => (
-                          <div key={idx} className="p-2 rounded bg-slate-900 border border-slate-800/80 font-mono text-[11px]">
-                            <span className="text-cyan-400 font-bold">{ts.time}</span> - {ts.description || ts.statement}
+                          <div key={idx} className="p-2 rounded bg-slate-900 border border-slate-800/80 font-mono text-[11px] space-y-0.5">
+                            <div className="flex justify-between text-cyan-400 font-bold">
+                              <span>Timestamp: {ts.time}</span>
+                              <span className="text-[10px] text-slate-400">Frame {idx + 1}</span>
+                            </div>
+                            <div className="text-slate-300 font-sans">{ts.description || ts.statement}</div>
                           </div>
                         ))}
                       </div>
@@ -698,6 +713,7 @@ EVIDENCE TAGS: ${evidence.tags.join(', ')}`
                       </ul>
                     </div>
                   )}
+
                 </div>
               ) : (
                 <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-4 shadow-lg">

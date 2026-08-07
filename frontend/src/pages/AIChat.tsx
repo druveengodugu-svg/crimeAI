@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Send, User, Sparkles, Shield, Loader2, ArrowRight, CheckCircle2, Cpu } from 'lucide-react';
+import { Bot, Send, User, Sparkles, Shield, Loader2, ArrowRight, CheckCircle2, Cpu, FileText, AlertTriangle } from 'lucide-react';
 import { caseService } from '../services/caseService';
 import { aiService } from '../services/aiService';
 import { InvestigationCase, ChatMessage } from '../types';
@@ -35,7 +35,7 @@ export const AIChat: React.FC = () => {
           id: 'welcome-1',
           case_id: selectedCaseId,
           sender: 'ai',
-          message: `Hello Investigator. I am CrimeLens AI Copilot. Ask me questions regarding the uploaded evidence files, FIR details, getaway vehicles, or witness audio. Answers are generated strictly from stored case evidence.`,
+          message: `Hello Investigator. I am CrimeLens AI, an evidence-grounded investigation assistant. My knowledge is strictly restricted to the uploaded evidence of this active case dossier. I will answer only from the uploaded files for this case and refuse to use external knowledge.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -84,10 +84,10 @@ export const AIChat: React.FC = () => {
   };
 
   const quickPrompts = [
+    "What is the proof?",
+    "Why is this considered suspicious?",
     "Who is mentioned in the FIR?",
     "What vehicles appear in the CCTV?",
-    "What happened after 8 PM?",
-    "Show case chronological timeline",
     "What contradictions exist in evidence?"
   ];
 
@@ -101,12 +101,12 @@ export const AIChat: React.FC = () => {
           </div>
           <div>
             <h1 className="text-sm font-extrabold text-white font-space flex items-center gap-2">
-              AI Multimodal Copilot Chat
+              Explainable AI Investigation Copilot
               <span className="text-[10px] text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
-                <CheckCircle2 className="h-3 w-3" /> Grounded In Evidence
+                <CheckCircle2 className="h-3 w-3" /> Evidence-Backed Reasoning
               </span>
             </h1>
-            <p className="text-[11px] text-slate-400 font-mono">Answers derived strictly from case evidence context</p>
+            <p className="text-[11px] text-slate-400 font-mono">Conclusions strictly supported by evidence references & transparent confidence scoring</p>
           </div>
         </div>
 
@@ -144,20 +144,29 @@ export const AIChat: React.FC = () => {
 
             <div
               className={`
-                max-w-2xl p-4 rounded-2xl text-xs leading-relaxed space-y-2.5 shadow-md
+                max-w-2xl p-4 rounded-2xl text-xs leading-relaxed space-y-3 shadow-md
                 ${msg.sender === 'user'
                   ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-100 border border-cyan-500/40 rounded-tr-none font-mono'
                   : 'bg-slate-950/90 text-slate-200 border border-slate-800/90 rounded-tl-none font-sans'}
               `}
             >
-              <div className="whitespace-pre-line">{msg.message}</div>
+              <div className="whitespace-pre-line leading-relaxed font-sans">{msg.message}</div>
+
+              {msg.sender === 'ai' && (
+                <div className="p-2.5 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-[10px] text-cyan-300 font-mono flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <Shield className="h-3.5 w-3.5 text-cyan-400" /> Explainable AI Guardrail:
+                  </span>
+                  <span className="text-slate-400">All findings require human investigator verification</span>
+                </div>
+              )}
 
               {msg.sources && msg.sources.length > 0 && (
                 <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-1.5 text-[10px] text-slate-400 font-mono">
-                  <span className="text-cyan-400 font-bold">Evidence Sources:</span>
+                  <span className="text-cyan-400 font-bold">Evidence Files Used:</span>
                   {msg.sources.map((s, idx) => (
-                    <span key={idx} className="bg-slate-900 px-2 py-0.5 rounded-md border border-slate-800 text-cyan-300">
-                      📄 {s}
+                    <span key={idx} className="bg-slate-900 px-2 py-0.5 rounded-md border border-slate-800 text-cyan-300 flex items-center gap-1">
+                      <FileText className="h-3 w-3 text-cyan-400" /> {s}
                     </span>
                   ))}
                 </div>
@@ -177,7 +186,7 @@ export const AIChat: React.FC = () => {
         {loading && (
           <div className="flex items-center space-x-3 text-cyan-400 text-xs font-mono p-4">
             <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
-            <span>Cross-referencing evidence repository with Gemini Multimodal RAG...</span>
+            <span>Cross-referencing evidence repository & synthesizing explainable reasoning...</span>
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -204,7 +213,7 @@ export const AIChat: React.FC = () => {
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-          placeholder="Ask AI Copilot about FIR, CCTV getaway, witness audio, or timeline..."
+          placeholder="Ask AI Copilot: What is the proof? Why is this suspicious? Who is mentioned in FIR?"
           className="flex-1 bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono transition-colors"
         />
         <button
@@ -218,3 +227,4 @@ export const AIChat: React.FC = () => {
     </div>
   );
 };
+

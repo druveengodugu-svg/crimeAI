@@ -66,6 +66,10 @@ export interface TimelineEvent {
   source_name?: string;
   source_type?: string;
   confidence_score: number;
+  evidence_detail?: string;
+  reasoning?: string;
+  confidence_level?: 'High' | 'Medium' | 'Low';
+  confidence_reason?: string;
 }
 
 export interface Contradiction {
@@ -73,11 +77,16 @@ export interface Contradiction {
   case_id: string;
   statement1: string;
   source1: string;
+  source1_details?: string;
   statement2: string;
   source2: string;
+  source2_details?: string;
   confidence_score: number;
   explanation: string;
   category: string;
+  reasoning?: string;
+  confidence_level?: 'High' | 'Medium' | 'Low';
+  confidence_reason?: string;
 }
 
 export interface GraphNode {
@@ -94,6 +103,17 @@ export interface GraphEdge {
   confidence: number;
 }
 
+export interface StructuredFinding {
+  finding: string;
+  evidence: string;
+  evidence_details?: string;
+  reasoning: string;
+  confidence: number;
+  confidence_level?: 'High' | 'Medium' | 'Low';
+  confidence_reason?: string;
+  recommended_verification?: string;
+}
+
 export interface InvestigationReport {
   id?: string;
   case_id: string;
@@ -102,15 +122,16 @@ export interface InvestigationReport {
   executive_summary: string;
   evidence_summary: string;
   timeline_json: TimelineEvent[];
-  suspects_json: Array<{ name: string; description: string; source: string }>;
-  vehicles_json: Array<{ make: string; plate: string; relevance: string }>;
-  weapons_json: Array<{ type: string; evidence: string }>;
-  locations_json: Array<{ location: string; address: string }>;
-  witness_statements_json: Array<{ witness: string; summary: string }>;
+  suspects_json: Array<{ name: string; description: string; source: string; evidence_details?: string; reasoning?: string; confidence?: number; confidence_reason?: string; recommended_verification?: string }>;
+  vehicles_json: Array<{ make: string; plate: string; relevance: string; evidence?: string; evidence_details?: string; reasoning?: string; confidence?: number; confidence_reason?: string; recommended_verification?: string }>;
+  weapons_json: Array<{ type: string; evidence: string; evidence_details?: string; reasoning?: string; confidence?: number; confidence_reason?: string; recommended_verification?: string }>;
+  locations_json: Array<{ location: string; address: string; evidence?: string; reasoning?: string; confidence?: number; confidence_reason?: string }>;
+  witness_statements_json: Array<{ witness: string; summary: string; evidence_details?: string; reasoning?: string; confidence?: number }>;
   contradictions_json: Contradiction[];
-  leads_json: string[];
-  next_steps_json: string[];
+  leads_json: Array<string | StructuredFinding>;
+  next_steps_json: Array<string | StructuredFinding>;
   overall_confidence: number;
+  overall_confidence_reason?: string;
   created_at?: string;
 }
 
@@ -120,5 +141,12 @@ export interface ChatMessage {
   sender: 'user' | 'ai';
   message: string;
   sources?: string[];
+  evidence_used?: Array<{ file: string; type?: string; location?: string }>;
+  reasoning?: string;
+  confidence_score?: number;
+  confidence_level?: 'High' | 'Medium' | 'Low';
+  confidence_reason?: string;
+  recommended_verification?: string;
   timestamp: string;
 }
+

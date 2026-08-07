@@ -71,28 +71,52 @@ export async function chatWithCase(req: AuthenticatedRequest, res: Response): Pr
   }
 
   const contextData = {
-    evidence_files: evidenceFiles.map(e => ({ name: e.file_name, category: e.file_category })),
-    timeline: timeline.map(t => `${t.event_timestamp}: ${t.title} - ${t.description}`),
+    evidence_files: evidenceFiles.map(e => ({ id: e.id, name: e.file_name, category: e.file_category, type: e.file_type })),
+    timeline: timeline.map(t => `${t.event_timestamp}: ${t.title} - ${t.description} (Source: ${t.source_name})`),
     contradictions: contradictions.map(c => `${c.category}: ${c.statement1} (Source: ${c.source1}) vs ${c.statement2} (Source: ${c.source2})`),
-    processed_summaries: analyses.map(a => `${a.agent_type}: ${a.raw_summary}`),
+    processed_summaries: analyses.map(a => {
+      const ef = evidenceFiles.find(e => e.id === a.file_id);
+      return {
+        file_name: ef?.file_name || 'Evidence File',
+        file_type: ef?.file_type || '',
+        file_category: ef?.file_category || '',
+        agent_type: a.agent_type,
+        raw_summary: a.raw_summary,
+        analysis_data: a.analysis_data
+      };
+    }),
     report_executive_summary: report?.executive_summary || 'Analysis in progress.'
   };
 
-  const prompt = `You are CrimeLens AI Assistant, a law enforcement intelligence copilot.
-CRITICAL MANDATE: Answer the user's question STRICTLY based ONLY on the evidence provided in the case context below. Do not invent external facts. If the information is not present in the evidence context, explicitly state: "The uploaded evidence does not provide enough information to answer this question."
+  const prompt = `You are CrimeLens AI, an evidence-grounded investigation assistant. Your only source of knowledge is the uploaded evidence for the current case. Never use outside knowledge, internet information, assumptions, or your own background knowledge. If the answer is not explicitly supported by the uploaded evidence, state that there is insufficient evidence. Always cite the evidence file(s), page numbers, timestamps, or extracted sections used to generate your answer. Never fabricate facts, names, timelines, or conclusions.
 
-Case Evidence Context:
+PRIMARY OBJECTIVE:
+The AI chatbot must answer ONLY from the uploaded evidence of the currently opened case below.
+The uploaded evidence is the AI's ONLY knowledge source.
+Ignore all external knowledge, pre-trained information, internet knowledge, and assumptions.
+
+HANDLING UNSUPPORTED QUESTIONS:
+If the user asks something that CANNOT be answered from the uploaded evidence for this case, you MUST NOT guess or use outside knowledge.
+Instead, respond EXACTLY with:
+"I could not find sufficient information in the uploaded evidence to answer this question. Please upload additional evidence or ask a question related to the available case files."
+
+EVERY RESPONSE MUST INCLUDE:
+Answer: [Direct answer grounded strictly in uploaded evidence or exact refusal message]
+Evidence Used: [File Name(s)]
+Timestamp: [Timestamp for video/audio, or Page Number for documents]
+Confidence: [Confidence score e.g. 95%]
+
+Case Evidence Context (Active Case ${case_id}):
 ${JSON.stringify(contextData, null, 2)}
 
-User Question: "${message}"
-
-Provide a professional, clear, bulleted intelligence response citing specific source evidence where applicable.`;
+User Question: "${message}"`;
 
   let aiReply = await callGeminiModel(prompt);
 
   if (!aiReply || aiReply.trim().length === 0) {
     aiReply = generateEvidenceGroundedChatReply(contextData, message);
   }
+
 
 
   // Save chat records
