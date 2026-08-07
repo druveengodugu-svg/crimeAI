@@ -1,9 +1,13 @@
 import { Response } from 'express';
+import path from 'path';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { runAgenticInvestigationPipeline } from '../agents/agentOrchestrator';
 import { memoryStore, supabaseClient } from '../services/supabaseService';
-import { callGeminiModel } from '../config/gemini';
-import { generateEvidenceGroundedChatReply } from '../services/smartExtractor';
+import { processTargetedRAGQuery } from '../services/ragService';
+import { processImageAgent } from '../agents/imageAgent';
+import { processVideoAgent } from '../agents/videoAgent';
+import { processAudioAgent } from '../agents/audioAgent';
+import { processDocumentAgent } from '../agents/documentAgent';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function analyzeCase(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -46,6 +50,7 @@ export async function chatWithCase(req: AuthenticatedRequest, res: Response): Pr
   let contradictions: any[] = [];
   let report: any = null;
   let analyses: any[] = [];
+  let chatHistory: any[] = [];
 
   if (supabaseClient) {
     const { data: f } = await supabaseClient.from('evidence_files').select('*').eq('case_id', case_id);
@@ -62,15 +67,81 @@ export async function chatWithCase(req: AuthenticatedRequest, res: Response): Pr
 
     const { data: a } = await supabaseClient.from('evidence_analysis').select('*').eq('case_id', case_id);
     analyses = a || [];
+
+    const { data: ch } = await supabaseClient.from('chat_history').select('*').eq('case_id', case_id).order('created_at', { ascending: true });
+    chatHistory = ch || [];
   } else {
     evidenceFiles = memoryStore.evidenceFiles.filter(f => f.case_id === case_id);
     timeline = memoryStore.timeline.filter(t => t.case_id === case_id);
     contradictions = memoryStore.contradictions.filter(ct => ct.case_id === case_id);
     report = memoryStore.reports.find(r => r.case_id === case_id);
     analyses = memoryStore.analysis.filter(an => an.case_id === case_id);
+    chatHistory = memoryStore.chatHistory.filter(ch => ch.case_id === case_id);
+  }
+
+  // Auto-analyze any un-analyzed evidence files on-the-fly
+  for (const ef of evidenceFiles) {
+    const hasAnalysis = analyses.some(a => a.file_id === ef.id);
+    if (!hasAnalysis) {
+      try {
+        const fullDiskPath = path.join(__dirname, '../uploads', path.basename(ef.file_path || ''));
+        let analysisResult: any = null;
+        let agentType = 'DocumentAgent';
+
+        const fileType = (ef.file_type || '').toLowerCase();
+        const fileCategory = (ef.file_category || '').toLowerCase();
+
+        if (fileType === 'image' || fileCategory.includes('photo')) {
+          agentType = 'ImageAgent';
+          analysisResult = await processImageAgent(fullDiskPath, ef.file_name);
+        } else if (fileType === 'video' || fileCategory.includes('cctv')) {
+          agentType = 'VideoAgent';
+          analysisResult = await processVideoAgent(fullDiskPath, ef.file_name);
+        } else if (fileType === 'audio' || fileCategory.includes('witness')) {
+          agentType = 'AudioAgent';
+          analysisResult = await processAudioAgent(fullDiskPath, ef.file_name);
+        } else {
+          agentType = 'DocumentAgent';
+          analysisResult = await processDocumentAgent(fullDiskPath, ef.file_name);
+        }
+
+        const analysisObj = {
+          id: uuidv4(),
+          file_id: ef.id,
+          case_id,
+          agent_type: agentType,
+          raw_summary: typeof analysisResult === 'string' ? analysisResult : JSON.stringify(analysisResult),
+          extracted_entities: analysisResult.extracted_entities || analysisResult.detected_objects || analysisResult.detected_entities || {},
+          analysis_data: analysisResult,
+          created_at: new Date().toISOString()
+        };
+
+        if (supabaseClient) {
+          await supabaseClient.from('evidence_analysis').insert(analysisObj);
+        } else {
+          memoryStore.analysis.push(analysisObj as any);
+        }
+        analyses.push(analysisObj);
+        console.log(`[RAG On-The-Fly Indexer] Parsed un-analyzed file: ${ef.file_name} (${agentType})`);
+      } catch (err) {
+        console.warn(`[RAG On-The-Fly Indexer Failed] Could not parse ${ef.file_name}:`, err);
+      }
+    }
+  }
+
+  // Fetch case metadata record (title, crime_type/category, description)
+  let caseRecord: any = null;
+  if (supabaseClient) {
+    const { data } = await supabaseClient.from('cases').select('*').eq('id', case_id).single();
+    caseRecord = data;
+  } else {
+    caseRecord = memoryStore.cases.find(c => c.id === case_id);
   }
 
   const contextData = {
+    case_title: caseRecord?.title || 'Grand Vault Armed Heist & Homicide',
+    case_category: caseRecord?.crime_type || caseRecord?.category || 'Armed Robbery & Homicide',
+    case_description: caseRecord?.description || 'Armored vault robbery at Grand Apex Bank with suspect fleeing in a dark vehicle. Multiple witnesses, CCTV, and audio recordings collected.',
     evidence_files: evidenceFiles.map(e => ({ id: e.id, name: e.file_name, category: e.file_category, type: e.file_type })),
     timeline: timeline.map(t => `${t.event_timestamp}: ${t.title} - ${t.description} (Source: ${t.source_name})`),
     contradictions: contradictions.map(c => `${c.category}: ${c.statement1} (Source: ${c.source1}) vs ${c.statement2} (Source: ${c.source2})`),
@@ -88,34 +159,8 @@ export async function chatWithCase(req: AuthenticatedRequest, res: Response): Pr
     report_executive_summary: report?.executive_summary || 'Analysis in progress.'
   };
 
-  const prompt = `You are CrimeLens AI, an evidence-grounded investigation assistant. Your only source of knowledge is the uploaded evidence for the current case. Never use outside knowledge, internet information, assumptions, or your own background knowledge. If the answer is not explicitly supported by the uploaded evidence, state that there is insufficient evidence. Always cite the evidence file(s), page numbers, timestamps, or extracted sections used to generate your answer. Never fabricate facts, names, timelines, or conclusions.
-
-PRIMARY OBJECTIVE:
-The AI chatbot must answer ONLY from the uploaded evidence of the currently opened case below.
-The uploaded evidence is the AI's ONLY knowledge source.
-Ignore all external knowledge, pre-trained information, internet knowledge, and assumptions.
-
-HANDLING UNSUPPORTED QUESTIONS:
-If the user asks something that CANNOT be answered from the uploaded evidence for this case, you MUST NOT guess or use outside knowledge.
-Instead, respond EXACTLY with:
-"I could not find sufficient information in the uploaded evidence to answer this question. Please upload additional evidence or ask a question related to the available case files."
-
-EVERY RESPONSE MUST INCLUDE:
-Answer: [Direct answer grounded strictly in uploaded evidence or exact refusal message]
-Evidence Used: [File Name(s)]
-Timestamp: [Timestamp for video/audio, or Page Number for documents]
-Confidence: [Confidence score e.g. 95%]
-
-Case Evidence Context (Active Case ${case_id}):
-${JSON.stringify(contextData, null, 2)}
-
-User Question: "${message}"`;
-
-  let aiReply = await callGeminiModel(prompt);
-
-  if (!aiReply || aiReply.trim().length === 0) {
-    aiReply = generateEvidenceGroundedChatReply(contextData, message);
-  }
+  // Process Targeted RAG Query (Intent classification + Chunked Retrieval)
+  const aiReply = await processTargetedRAGQuery(contextData, message, chatHistory);
 
 
 

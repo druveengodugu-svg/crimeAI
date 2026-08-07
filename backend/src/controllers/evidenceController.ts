@@ -78,11 +78,62 @@ export async function uploadEvidence(req: Request, res: Response): Promise<void>
     }
 
     uploadedRecords.push(fileRecord);
+
+    // Trigger immediate background AI analysis so OCR, speech-to-text, and video timestamps are indexed instantly
+    const fullDiskPath = path.join(__dirname, '../../uploads', file.filename);
+    (async () => {
+      try {
+        let analysisResult: any = null;
+        let agentType = 'DocumentAgent';
+
+        if (fileType === 'image' || category.toLowerCase().includes('photo')) {
+          agentType = 'ImageAgent';
+          analysisResult = await processImageAgent(fullDiskPath, file.originalname);
+        } else if (fileType === 'video' || category.toLowerCase().includes('cctv')) {
+          agentType = 'VideoAgent';
+          analysisResult = await processVideoAgent(fullDiskPath, file.originalname);
+        } else if (fileType === 'audio' || category.toLowerCase().includes('witness')) {
+          agentType = 'AudioAgent';
+          analysisResult = await processAudioAgent(fullDiskPath, file.originalname);
+        } else {
+          agentType = 'DocumentAgent';
+          analysisResult = await processDocumentAgent(fullDiskPath, file.originalname);
+        }
+
+        fileRecord.ai_status = 'Completed';
+
+        const analysisObj = {
+          id: uuidv4(),
+          file_id: fileRecord.id,
+          case_id: caseId,
+          agent_type: agentType,
+          raw_summary: typeof analysisResult === 'string' ? analysisResult : JSON.stringify(analysisResult),
+          extracted_entities: analysisResult.extracted_entities || analysisResult.detected_objects || analysisResult.detected_entities || {},
+          analysis_data: analysisResult,
+          created_at: new Date().toISOString()
+        };
+
+        if (supabaseClient) {
+          await supabaseClient.from('evidence_files').update({ ai_status: 'Completed' }).eq('id', fileRecord.id);
+          await supabaseClient.from('evidence_analysis').insert(analysisObj);
+        } else {
+          const existingIdx = memoryStore.analysis.findIndex(a => a.file_id === fileRecord.id);
+          if (existingIdx >= 0) {
+            memoryStore.analysis[existingIdx] = analysisObj as any;
+          } else {
+            memoryStore.analysis.push(analysisObj as any);
+          }
+        }
+        console.log(`[RAG Auto-Indexer] Successfully parsed & indexed evidence file: ${file.originalname} (${agentType})`);
+      } catch (err) {
+        console.warn(`[RAG Auto-Indexer Failed] Error processing ${file.originalname}:`, err);
+      }
+    })();
   }
 
   res.status(201).json({
     success: true,
-    message: `${uploadedRecords.length} evidence file(s) uploaded successfully.`,
+    message: `${uploadedRecords.length} evidence file(s) uploaded & indexed successfully.`,
     files: uploadedRecords
   });
 }
